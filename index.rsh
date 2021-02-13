@@ -139,6 +139,9 @@ function applyMove(state, move, i) {
 const winner_is_x = (state, i) => winning_pair(state.xs[i]);
 const winner_is_o = (state, i) => winning_pair(state.os[i]);
 
+const result_is_x = (state) => winning_pair(state.result.xs);
+const result_is_o = (state) => winning_pair(state.result.os);
+
 // Timeout Delay
 const DELAY = 20;
 
@@ -314,8 +317,18 @@ export const main =
 
             }
 
+            const [toA, toB] = (result_is_x(state) ? [2, 0]
+                : (result_is_o(state) ? [0, 2]
+                    : [1, 1]));
+
+            transfer(toA * wagerAmount).to(A);
+            transfer(toB * wagerAmount).to(B);
+            commit();
             // check the results board
 
+            each([A, B], () => {
+                interact.endsWith(state);
+            });
             // transfer balance depending on the result (A wins | B wins | draw).
             exit();
         });
