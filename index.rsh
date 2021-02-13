@@ -195,15 +195,14 @@ export const main =
 
             const x_is_first = (((coinFlipA % 2) + (coinFlipB % 2)) % 2) == 0;
 
-            const state = create_initial_state(x_is_first);
-            // while results board isn't done:
+            const state = create_initial_state(x_is_first);            // while results board isn't done:
             invariant(balance() == (2 * wagerAmount));
-            while (!single_done()) {
+            while (!single_done(state.result.xs, state.result.os)) {
                 if (state.xs_turn) {
                     commit();
                     // A chooses a single
                     A.only(() => {
-                        const singleA = getLegalSingle(state);
+                        const singleA = getLegalSingle(interact, state);
 
                         // A chooses a move
                         const moveA = getValidMove(interact, state, singleA);
@@ -231,6 +230,18 @@ export const main =
                             // ​TODO: make a coin flip to decides who wins the board
                         }
                     }
+
+                    // This is the Single A's decision has led to.
+                    const ledSingle = { xs: state.xs[moveA], os: state.os[moveA] };
+
+                    // if the single A's decision has led is full:
+                    if (single_done(ledSingle.xs, ledSingle.os)) {
+                        // B chooses a single
+                        B.only(() => {
+                            const singleB = getLegalSingle(interact, state);
+                        });
+                    }
+
                 }
                 else {
                     commit();
@@ -238,9 +249,7 @@ export const main =
 
             }
 
-            // - if the single A's decision has led is full:
 
-            // - B chooses a single
 
             // ​    - if B chooses a full single
 
