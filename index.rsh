@@ -164,7 +164,6 @@ export const main =
         {},
         [['Alice', Alice], ['Bob', Bob]],
         (A, B) => {
-
             // A wagers and flips a coin
             A.only(() => {
                 const wagerAmount = declassify(interact.getWager());
@@ -208,7 +207,6 @@ export const main =
                         const moveA = getValidMove(interact, state, singleA);
                     });
                     A.publish(singleA, moveA);
-
                     // if valid make the move (X)
                     // else give an error
                     state = applyMove(state, moveA, singleA);
@@ -218,68 +216,103 @@ export const main =
                         // if A wins:
                         if (winner_is_x(state, singleA)) {
                             // ​change the single in results board to X
-                            state.result.xs[singleA] = true;
+                            state[result][xs][singleA] = true;
+
                         }
                         // else if B wins:
                         else if (winner_is_o(state, singleA)) {
                             // change the single in results board to O
-                            state.result.os[singleA] = true;
+                            state[result][os][singleA] = true;
                         }
                         // else (draw):
                         else {
                             // ​TODO: make a coin flip to decides who wins the board
+                            state[result][os][singleA] = true;
                         }
                     }
 
+                    commit();
+
                     // This is the Single A's decision has led to.
-                    const ledSingle = { xs: state.xs[moveA], os: state.os[moveA] };
+                    const ledSingle = { xs: (state.xs[moveA]), os: (state.os[moveA]), };
 
                     // if the single A's decision has led is full:
                     if (single_done(ledSingle.xs, ledSingle.os)) {
                         // B chooses a single
                         B.only(() => {
                             const singleB = getLegalSingle(interact, state);
+                            // if B chooses a full single, give error
+                            assume(!single_done(state.xs[singleB], state.os[singleB]));
                         });
+                        // else, choose it
+                        B.publish(singleB);
+                    }
+                    else {
+                        B.only(() => {
+                            const _singleB = moveA;
+                            const singleB = declassify(_singleB);
+                        });
+                        B.publish(singleB);
                     }
                     continue;
                 }
                 else {
                     commit();
+                    // B chooses a move
+                    B.only(() => {
+                        const moveB = getValidMove(interact, state, singleA);
+                    });
+                    B.publish(moveB);
+
+                    state = applyMove(state, moveB, singleB);
+
+                    // If single is filled
+                    if (single_done(state.xs[singleB], state.os[singleB])) {
+                        // if A wins:
+                        if (winner_is_x(state, singleB)) {
+                            // ​change the single in results board to X
+                            state[result][xs][singleB] = true;
+
+                        }
+                        // else if B wins:
+                        else if (winner_is_o(state, singleB)) {
+                            // change the single in results board to O
+                            state[result][os][singleB] = true;
+                        }
+                        // else (draw):
+                        else {
+                            // ​TODO: make a coin flip to decides who wins the board
+                            state[result][os][singleB] = true;
+                        }
+                    }
+
+                    // This is the Single B's decision has led to.
+                    const ledSingle = { xs: (state.xs[moveB]), os: (state.os[moveB]), };
+
+                    commit();
+
+                    // if the single B's decision has led is full:
+                    if (single_done(ledSingle.xs, ledSingle.os)) {
+                        // A chooses a single
+                        A.only(() => {
+                            const singleA = getLegalSingle(interact, state);
+                            // if A chooses a full single, give error
+                            assume(!single_done(state.xs[singleA], state.os[singleA]));
+                        });
+                        // else, choose it
+                        A.publish(singleA);
+                    }
+                    else {
+                        A.only(() => {
+                            const _singleA = moveB;
+                            const singleA = declassify(_singleA);
+                        });
+                        A.publish(singleA);
+                    }
                     continue;
                 }
+
             }
-
-
-
-            // ​    - if B chooses a full single
-
-            // ​     - give error
-
-            // ​    - else
-
-            // ​     - choose it
-
-            // B chooses a move
-
-            // - if valid make the move (O)
-
-            // - else give an error
-
-
-
-            // - if the single is filled after move:
-
-            // - if A wins:
-
-            // ​    change the single in results board to X
-
-            // - else if B wins:
-
-            // ​    change the single in results board to O
-
-            // - else (draw):
-
-            // ​    make a coin flip to decides who wins the board
 
             // check the results board
 
