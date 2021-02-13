@@ -64,7 +64,7 @@ const cell = (row, col) => col + row * COLS;
 const seq = (single, row, col, dRow, dCol) =>
 (single[cell(row, col)] &&
     single[cell(row + dRow, col + dCol)] &&
-    single[cell(row + dRow + dRow, col + dCol, dCol)]);
+    single[cell(row + dRow + dRow, col + dCol + dCol)]);
 
 // Special cases of sequences
 const row = (single, row) => seq(single, row, 0, 0, 1);
@@ -90,15 +90,15 @@ const single_filled = (single) =>
 // state : State
 // i : ith Single in Total
 const single_done = (single1, single2) =>
-(winning_pair(single1, single2)
-    || winning_pair(single1, single2)
+(winning_pair(single1)
+    || winning_pair(single2)
     || single_filled(marks_all(single1, single2)));
 
 // Legal move is a possible move between 0 and 8,
 // Valid move is a move to a empty cell
 // i : ith Single in Total
 const legalMove = (move) => (0 <= move && move < CELLS);
-const validMove = (state, move, i) => (!cell_both(state, i, move));
+const validMove = (state, move, i) => (!cell_both(state.xs[i], state.os[i], move));
 
 // Get a valid move from the frontend
 // A valid move contains an i number indicating the Single
@@ -132,7 +132,7 @@ function applyMove(state, move, i) {
         xs_turn: !turn,
         xs: (turn ? state.xs[i].set(move, true) : state.xs),
         os: (turn ? state.os : state.os[i].set(move, true)),
-        result: state.result
+        result: state.result,
     };
 }
 
@@ -195,8 +195,8 @@ export const main =
 
             const x_is_first = (((coinFlipA % 2) + (coinFlipB % 2)) % 2) == 0;
 
-            const state = create_initial_state(x_is_first);            // while results board isn't done:
-            invariant(balance() == (2 * wagerAmount));
+            var state = create_initial_state(x_is_first);            // while results board isn't done:
+            invariant((balance() == (2 * wagerAmount)));
             while (!single_done(state.result.xs, state.result.os)) {
                 if (state.xs_turn) {
                     commit();
@@ -207,7 +207,7 @@ export const main =
                         // A chooses a move
                         const moveA = getValidMove(interact, state, singleA);
                     });
-                    A.publish([singleA, moveA]);
+                    A.publish(singleA, moveA);
 
                     // if valid make the move (X)
                     // else give an error
@@ -241,12 +241,12 @@ export const main =
                             const singleB = getLegalSingle(interact, state);
                         });
                     }
-
+                    continue;
                 }
                 else {
                     commit();
+                    continue;
                 }
-
             }
 
 
