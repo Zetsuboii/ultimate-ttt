@@ -19,15 +19,23 @@ const State = Object({
     result: ResultState,
 });
 
-const board_single = array(Bool,
-    [false, false, false,
-        false, false, false,
-        false, false, false,]);
+/**
+ * @type Single
+ */
+const board_single = array(Bool, [
+    false, false, false,
+    false, false, false,
+    false, false, false,
+]);
 
-const board_total = array(Single,
-    [board_single, board_single, board_single,
-        board_single, board_single, board_single,
-        board_single, board_single, board_single]);
+/**
+ * @type Total
+ */
+const board_total = array(Single, [
+    board_single, board_single, board_single,
+    board_single, board_single, board_single,
+    board_single, board_single, board_single,
+]);
 
 const create_initial_state = (is_x_first) => ({
     xs_turn: is_x_first,
@@ -39,70 +47,113 @@ const create_initial_state = (is_x_first) => ({
     },
 });
 
-// Check both singles, return if cell is occupied
-// single : Single
-// j : jth cell in Single
-const cell_both = (single1, single2, j) => //??
+/**
+ * Return if both singles are true at given index
+ * @param single1 Single
+ * @param single2 Single
+ * @param j int
+ */
+const cell_both = (single1, single2, j) =>
     (single1[j] || single2[j]);
 
-// Return a Single showing which cells are empty
-// state : State
-// i : ith Single in total
+/**
+ * Return a Single showing which cells are empty
+ * @param single1 Single
+ * @param single2 Single
+ */
 const marks_all = (single1, single2) =>
     array(Bool,
         [cell_both(single1, single2, 0), cell_both(single1, single2, 1), cell_both(single1, single2, 2),
         cell_both(single1, single2, 3), cell_both(single1, single2, 4), cell_both(single1, single2, 5),
         cell_both(single1, single2, 6), cell_both(single1, single2, 7), cell_both(single1, single2, 8)]);
 
-// Return index of a cell by its cons
+/**
+ * Return index of a cell by its col's
+ * @param row UInt
+ * @param col UInt
+ */
 const cell = (row, col) => col + row * COLS;
 
-// Return if a sequence is matching
-// single : Single
-// dRow : change in rows
-// dCol : change in columns
-const seq = (single, row, col, dRow, dCol) =>
-(single[cell(row, col)] &&
-    single[cell(row + dRow, col + dCol)] &&
-    single[cell(row + dRow + dRow, col + dCol + dCol)]);
+/**
+ * Return if a sequence is matching
+ * @param single Single
+ * @param row UInt
+ * @param col UInt
+ * @param dRow UInt
+ * @param dCol UInt
+ */
+// const seq = (single, row, col, dRow, dCol) => (
+//     single[cell(row, col)] &&
+//     single[cell(row + dRow, col + dCol)] &&
+//     single[cell(row + dRow + dRow,  col + dCol + dCol)]
+// );
+
+const op = (op, x) => (y) => op(x, y);
+
+const seq = (b, r, c, dr, dc) =>
+      (b[cell(r, c)] &&
+       b[cell(r+dr, dc(c))] &&
+       b[cell(r+dr+dr, dc(dc(c)))]);
 
 // Special cases of sequences
-const row = (single, row) => seq(single, row, 0, 0, 1);
-const col = (single, col) => seq(single, 0, col, 1, 0);
-
-// Return if single has any winning pairs
-// single : Single
-const winning_pair = (single) =>
-(row(single, 0) || row(single, 1) || row(single, 2) ||
-    col(single, 0) || col(single, 1) || col(single, 2) ||
-    seq(single, 0, 0, 1, 1) ||
-    seq(single, 0, 2, 1, -1));
-
-// Return if the single is filled
-// single : Single
-const single_filled = (single) =>
-(single[0] && single[1] && single[2] &&
+const row = (b, r) => seq(b, r, 0, 0, op(add, 1));
+const col = (b, c) => seq(b, 0, c, 1, op(add, 0));
+/**
+ * Return if the single is filled
+ * @param single Single
+ */
+const winning_pair = (b) =>
+      (row(b, 0) || row(b, 1) || row(b, 2) ||
+       col(b, 0) || col(b, 1) || col(b, 2) ||
+       seq(b, 0, 0, 1, op(add, 1)) ||
+       seq(b, 0, 2, 1, op(sub, 1)));
+       
+/**
+ * Return if the single is filled
+ * @param single Single
+ */
+const single_filled = (single) => (
+    single[0] && single[1] && single[2] &&
     single[3] && single[4] && single[5] &&
-    single[6] && single[7] && single[8]);
+    single[6] && single[7] && single[8]
+);
 
-// Return if the single is either won by a side or is filled completely
-// If false, it means there are still rounds to play
-// state : State
-// i : ith Single in Total
-const single_done = (single1, single2) =>
-(winning_pair(single1)
-    || winning_pair(single2)
-    || single_filled(marks_all(single1, single2)));
+/**
+ * Return if the single is either won by a side or is filled completely.
+ * If false, it means there are still rounds to play
+ * @param single1 Single
+ * @param single2 Single
+ * 
+ * @return Boolean
+ */
+const single_done = (single1, single2) => (
+    winning_pair(single1) ||
+    winning_pair(single2) ||
+    single_filled(marks_all(single1, single2))
+);
 
-// Legal move is a possible move between 0 and 8,
-// Valid move is a move to a empty cell
-// i : ith Single in Total
+/**
+ * Return if move is between 0 and 8
+ * @param move UInt
+ */
 const legalMove = (move) => (0 <= move && move < CELLS);
+
+/**
+ * Return if move is to an empty cell
+ * @param state State
+ * @param move UInt
+ * @param i UInt
+ */
 const validMove = (state, move, i) => (!cell_both(state.xs[i], state.os[i], move));
 
-// Get a valid move from the frontend
-// A valid move contains an i number indicating the Single
-// and a move indicating the index of the move
+/**
+ * Get a valid move from the frontend
+ * @param interact Frontend
+ * @param state State
+ * @param i UInt
+ * 
+ * @returns UInt, a valid move
+ */
 function getValidMove(interact, state, i) {
     const _move = interact.getMove(state);
     assume(legalMove(_move));
@@ -111,6 +162,13 @@ function getValidMove(interact, state, i) {
     return declassify(_move);
 }
 
+/**
+ * Return a legal Single index.
+ * @param interact Frontend
+ * @param state State
+ * 
+ * @returns UInt, a legal Single
+ */
 function getLegalSingle(interact, state) {
     const _single = interact.getSingle(state);
     assume(legalMove(_single));
@@ -118,8 +176,14 @@ function getLegalSingle(interact, state) {
     return declassify(_single);
 }
 
-// Change the ith Single's move indexed boolean to true
-// Return the changed State
+/**
+ * Change the ith Single's move indexed boolean to true.
+ * @param state State
+ * @param move UInt
+ * @param i UInt
+ * 
+ * @return The changed State
+ */
 function applyMove(state, move, i) {
     require(legalMove(move) && legalMove(i));
     require(validMove(state, move, i));
@@ -130,8 +194,8 @@ function applyMove(state, move, i) {
 
     return {
         xs_turn: !turn,
-        xs: (turn ? state.xs[i].set(move, true) : state.xs),
-        os: (turn ? state.os : state.os[i].set(move, true)),
+        xs: (turn ? state.xs.set(i, state.xs[i].set(move, true)) : state.xs),
+        os: (turn ? state.os : state.os.set(i, state.os[i].set (move, true))),
         result: state.result,
     };
 }
@@ -142,7 +206,6 @@ const winner_is_o = (state, i) => winning_pair(state.os[i]);
 const result_is_x = (state) => winning_pair(state.result.xs);
 const result_is_o = (state) => winning_pair(state.result.os);
 
-// Timeout Delay
 const DELAY = 20;
 
 const Player = {
@@ -160,7 +223,7 @@ const Alice = {
 const Bob = {
     ...Player,
     acceptWager: Fun([UInt], Null),
-}
+};
 
 export const main =
     Reach.App(
@@ -197,112 +260,77 @@ export const main =
 
             const x_is_first = (((coinFlipA % 2) + (coinFlipB % 2)) % 2) == 0;
 
-            var state = create_initial_state(x_is_first);            // while results board isn't done:
+            // ! This part gives errors
+            var state = create_initial_state(x_is_first);
             invariant((balance() == (2 * wagerAmount)));
             while (!single_done(state.result.xs, state.result.os)) {
+                // TODO: Set A's or B's move and results in a single assignment
                 if (state.xs_turn) {
                     commit();
-                    // A chooses a single
+                    // ? A chooses a single
                     A.only(() => {
                         const singleA = getLegalSingle(interact, state);
-
                         // A chooses a move
                         const moveA = getValidMove(interact, state, singleA);
                     });
                     A.publish(singleA, moveA);
-                    // if valid make the move (X)
-                    // else give an error
-                    state = applyMove(state, moveA, singleA);
 
-                    // if the single is filled after move:
-                    if (single_done(state.xs[singleA], state.os[singleA])) {
-                        // if A wins:
-                        if (winner_is_x(state, singleA)) {
-                            // ​change the single in results board to X
-                            state[result][xs][singleA] = true;
-
-                        }
-                        // else if B wins:
-                        else if (winner_is_o(state, singleA)) {
-                            // change the single in results board to O
-                            state[result][os][singleA] = true;
-                        }
-                        // else (draw):
-                        else {
-                            // ​TODO: make a coin flip to decides who wins the board
-                            state[result][os][singleA] = true;
-                        }
-                    }
+                    const setup = applyMove(state, moveA, singleA);
 
                     commit();
 
-                    // This is the Single A's decision has led to.
-                    const ledSingle = { xs: (state.xs[moveA]), os: (state.os[moveA]), };
-
-                    // if the single A's decision has led is full:
+                    // ? This is the Single A's decision has led to.
+                    const ledSingle = { xs: (setup.xs[moveA]), os: (setup.os[moveA]), };
                     if (single_done(ledSingle.xs, ledSingle.os)) {
-                        // B chooses a single
                         B.only(() => {
-                            const singleB = getLegalSingle(interact, state);
-                            // if B chooses a full single, give error
-                            assume(!single_done(state.xs[singleB], state.os[singleB]));
+                            const singleB = getLegalSingle(interact, setup);
+                            assume(!single_done(setup.xs[singleB], setup.os[singleB]));
                         });
-                        // else, choose it
                         B.publish(singleB);
                     }
                     else {
                         B.only(() => {
-                            const _singleB = moveA;
-                            const singleB = declassify(_singleB);
                         });
-                        B.publish(singleB);
+                        B.publish();
+                        const singleB = moveA;
                     }
+
+                    // ? A makes move, Single is filled
+                    if (single_done(setup.xs[singleA], setup.os[singleA])) {
+                        // if A wins:
+                        state = {
+                            xs_turn: state.xs_turn,
+                            xs: state.xs,
+                            os: state.os,
+                            result: {
+                                xs: (winner_is_x(setup, singleA) ? setup.result.xs.set(singleA, true) : state.result.xs),
+                                os: (winner_is_x(setup, singleA) ? state.result.os : setup.result.os.set(singleA, true)),
+                            }
+                        };
+                        continue;
+                    }
+                    // ? A makes move, Single is not filled
+                    state = setup;
                     continue;
-                }
-                else {
+                } else {
+                    // ! single B in the consensus doesn't transfer here.
                     commit();
                     // B chooses a move
                     B.only(() => {
-                        const moveB = getValidMove(interact, state, singleA);
+                        const moveB = getValidMove(interact, state, singleB);
                     });
                     B.publish(moveB);
 
-                    state = applyMove(state, moveB, singleB);
-
-                    // If single is filled
-                    if (single_done(state.xs[singleB], state.os[singleB])) {
-                        // if A wins:
-                        if (winner_is_x(state, singleB)) {
-                            // ​change the single in results board to X
-                            state[result][xs][singleB] = true;
-
-                        }
-                        // else if B wins:
-                        else if (winner_is_o(state, singleB)) {
-                            // change the single in results board to O
-                            state[result][os][singleB] = true;
-                        }
-                        // else (draw):
-                        else {
-                            // ​TODO: make a coin flip to decides who wins the board
-                            state[result][os][singleB] = true;
-                        }
-                    }
+                    const setup = applyMove(state, moveB, singleB);
 
                     // This is the Single B's decision has led to.
-                    const ledSingle = { xs: (state.xs[moveB]), os: (state.os[moveB]), };
+                    const ledSingle = { xs: (setup.xs[moveB]), os: (setup.os[moveB]), };
 
-                    commit();
-
-                    // if the single B's decision has led is full:
                     if (single_done(ledSingle.xs, ledSingle.os)) {
-                        // A chooses a single
                         A.only(() => {
-                            const singleA = getLegalSingle(interact, state);
-                            // if A chooses a full single, give error
-                            assume(!single_done(state.xs[singleA], state.os[singleA]));
+                            const singleA = getLegalSingle(interact, setup);
+                            assume(!single_done(setup.xs[singleA], setup.os[singleA]));
                         });
-                        // else, choose it
                         A.publish(singleA);
                     }
                     else {
@@ -312,23 +340,51 @@ export const main =
                         });
                         A.publish(singleA);
                     }
+
+                    if (single_done(setup.xs[singleB], setup.os[singleB])){
+                        if (winner_is_o(setup, singleA)) {
+                            const setupFinal = {
+                                xs: setup.xs,
+                                os: setup.os,
+                                result: {
+                                    xs: setup.xs,
+                                    os: setup.os.set(singleA, true),
+                                }
+                            };
+                            state = setupFinal;
+                            continue;
+                        }
+                    } else {
+                        // TODO: Make a coinflip here
+                        const setupFinal = {
+                            xs: setup.xs,
+                            os: setup.os,
+                            result: {
+                                xs: setup.xs.set(singleA, true),
+                                os: setup.os,
+                            }
+                        };
+                        state = setupFinal;
+                        continue;
+                    }
+
+                    state = setup;
                     continue;
                 }
-
             }
-
+            
             const [toA, toB] = (result_is_x(state) ? [2, 0]
-                : (result_is_o(state) ? [0, 2]
-                    : [1, 1]));
+            : (result_is_o(state) ? [0, 2]
+                : [1, 1]));
 
             transfer(toA * wagerAmount).to(A);
             transfer(toB * wagerAmount).to(B);
             commit();
-            // check the results board
 
+            // Check the results board
             each([A, B], () => {
                 interact.endsWith(state);
             });
-            // transfer balance depending on the result (A wins | B wins | draw).
+
             exit();
         });
